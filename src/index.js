@@ -9,8 +9,17 @@
  * import { Detector } from 'js-aruco2';
  * import dict from 'js-aruco2/dictionaries/dict-5x5-50';
  *
+ * // a definition object is accepted directly, and wrapped once
  * const detector = new Detector({ dictionary: dict });
  * const markers = detector.detect(imageData);
+ *
+ * @example
+ * // or build the Dictionary yourself, to read tau / warnings / toSVG
+ * import { Detector, Dictionary } from 'js-aruco2';
+ * import def from 'js-aruco2/dictionaries/dict-5x5-50';
+ *
+ * const dictionary = new Dictionary(def);
+ * const detector = new Detector({ dictionary });
  */
 
 export { Detector, DEFAULT_OPTIONS, validateImage } from './detector.js';

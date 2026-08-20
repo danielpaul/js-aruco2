@@ -251,3 +251,46 @@ test('stats describe the last frame', () => {
   assert.ok(det.stats.candidates > 0);
   assert.equal(det.stats.decoded, 1);
 });
+
+/* ------------------------------------------------------------------ *
+ * Review follow-ups (PR #1)
+ * ------------------------------------------------------------------ */
+
+test('a dictionary definition object is accepted directly', async () => {
+  // The documented example passed the imported data module straight in, which
+  // used to throw because only a built Dictionary was accepted.
+  const { loadDictionaryDefinition } = await import('../src/dictionaries/index.js');
+  const def = await loadDictionaryDefinition('DICT_5X5_50');
+  const det = new Detector({ dictionary: def });
+  assert.equal(det.dictionary.name, 'DICT_5X5_50');
+  assert.equal(det.maxHammingDistance, 3);
+  assert.deepEqual(det.detect(frameFor(det.dictionary, 5)).map((m) => m.id), [5]);
+});
+
+test('the same definition object is only wrapped once', async () => {
+  const { loadDictionaryDefinition } = await import('../src/dictionaries/index.js');
+  const def = await loadDictionaryDefinition('DICT_5X5_50');
+  const a = new Detector({ dictionary: def });
+  const b = new Detector({ dictionary: def });
+  assert.equal(a.dictionary, b.dictionary, 'definitions are cached by identity');
+});
+
+test('a non-dictionary value produces a helpful error naming the real API', () => {
+  for (const bad of [undefined, null, 'DICT_5X5_50', 42, {}]) {
+    assert.throws(
+      () => new Detector({ dictionary: bad }),
+      (e) => e instanceof InvalidOptionError && /loadDictionary/.test(e.message),
+      `value ${JSON.stringify(bad)}`
+    );
+  }
+});
+
+test('maxCorrectionBits is intrinsic; maxHammingDistance is the applied bound', () => {
+  const plain = new Detector({ dictionary: dict5x5 });
+  assert.equal(dict5x5.maxCorrectionBits, 3);
+  assert.equal(plain.maxHammingDistance, 3);
+
+  const strict = new Detector({ dictionary: dict5x5, maxHammingDistance: 0 });
+  assert.equal(dict5x5.maxCorrectionBits, 3, 'the dictionary value must not move');
+  assert.equal(strict.maxHammingDistance, 0);
+});

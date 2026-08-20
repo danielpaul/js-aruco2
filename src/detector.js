@@ -55,36 +55,62 @@ export const DEFAULT_OPTIONS = {
 
 let SCRATCH_IDX = new Int32Array(64);
 
+/**
+ * Definition objects passed straight to `new Detector` are wrapped once and
+ * reused, so importing a dictionary data module and handing it to several
+ * detectors does not rebuild the packed tables each time.
+ * @type {WeakMap<object, Dictionary>}
+ */
+const definitionCache = new WeakMap();
+
+/**
+ * Accept either a built Dictionary or a plain definition object — passing the
+ * imported data module directly is the obvious thing to try, so it works.
+ * @param {any} value
+ * @returns {Dictionary}
+ */
+function toDictionary(value) {
+  if (value instanceof Dictionary) return value;
+  if (value && typeof value === 'object' && Array.isArray(value.codeList)) {
+    const cached = definitionCache.get(value);
+    if (cached) return cached;
+    const built = new Dictionary(value);
+    definitionCache.set(value, built);
+    return built;
+  }
+  throw new InvalidOptionError(
+    'Detector requires a `dictionary`: either a Dictionary instance, or a definition ' +
+    'object such as the default export of js-aruco2/dictionaries/<name>. ' +
+    'Use loadDictionary(name) from js-aruco2/dictionaries to load one by name.',
+    { received: value === undefined ? 'undefined' : typeof value }
+  );
+}
+
 export class Detector {
   /**
-   * @param {{ dictionary: Dictionary } & Partial<typeof DEFAULT_OPTIONS>} options
+   * @param {{ dictionary: Dictionary | import('./dictionary.js').DictionaryDefinition }
+   *   & Partial<typeof DEFAULT_OPTIONS>} options
    */
   constructor(options) {
     options = options || /** @type {any} */ ({});
     const { dictionary, ...rest } = options;
-    if (!(dictionary instanceof Dictionary)) {
-      throw new InvalidOptionError(
-        'Detector requires a `dictionary`. Use getDictionary(name) or new Dictionary(def).',
-        { received: dictionary === undefined ? 'undefined' : typeof dictionary }
-      );
-    }
-    this.dictionary = dictionary;
+    this.dictionary = toDictionary(dictionary);
     this.options = { ...DEFAULT_OPTIONS, ...rest };
     validateOptions(this.options);
 
     this.maxHammingDistance =
       this.options.maxHammingDistance != null
         ? this.options.maxHammingDistance
-        : dictionary.maxCorrectionBits;
+        : this.dictionary.maxCorrectionBits;
 
-    this.warpSize = dictionary.markSize * this.options.cellSize;
+    this.warpSize = this.dictionary.markSize * this.options.cellSize;
 
     this._grey = new GrayImage();
     this._thres = new GrayImage();
     this._patch = new GrayImage(this.warpSize, this.warpSize);
     this._binary = new Int32Array(0);
     this._contours = new ContourSet();
-    this._obs = new Uint32Array(dictionary.lanes);
+    this._obs = new Uint32Array(this.dictionary.lanes);
     this._quads = [];
     this._disposed = false;
 

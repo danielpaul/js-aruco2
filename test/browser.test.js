@@ -178,6 +178,7 @@ test('the module worker round-trips a transferred frame', { skip: !HAVE_BROWSER 
     return {
       dictionary: ready.dictionary,
       maxCorrectionBits: ready.maxCorrectionBits,
+      maxHammingDistance: ready.maxHammingDistance,
       ids: res.markers.map((m) => m.id),
       stats: res.stats,
       detached,
@@ -187,7 +188,10 @@ test('the module worker round-trips a transferred frame', { skip: !HAVE_BROWSER 
   }, { base: origin, draw: DRAW_MARKER });
 
   assert.equal(result.dictionary, 'DICT_5X5_50');
+  // the dictionary's intrinsic bound and the bound this detector applies are
+  // reported under distinct names, so an option override is visible to callers
   assert.equal(result.maxCorrectionBits, 3);
+  assert.equal(result.maxHammingDistance, 3);
   assert.deepEqual(result.ids, [12]);
   assert.equal(result.detached, true, 'the frame buffer should be transferred, not copied');
   assert.equal(result.returnedBytes, result.byteLengthBefore, 'the buffer comes back for reuse');

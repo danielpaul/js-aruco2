@@ -90,12 +90,17 @@ $('print').addEventListener('click', () => print());
 $('download').addEventListener('click', () => {
   const id = dict.ids[Math.max(0, Number($('from').value) | 0)];
   const blob = new Blob([dict.toSVG(id, { moduleSize: 10 })], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob),
+    href: url,
     download: `${dict.name}-${id}.svg`,
   });
+  // Firefox needs the anchor in the document, and revoking synchronously after
+  // click() can cancel the download before it starts.
+  document.body.append(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 });
 
 render();

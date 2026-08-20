@@ -21,7 +21,7 @@
  *   { type: 'dispose', id }
  *
  * Protocol (worker -> main):
- *   { type: 'ready', id, dictionary, ids, maxCorrectionBits, warnings }
+ *   { type: 'ready', id, dictionary, ids, maxCorrectionBits, maxHammingDistance, warnings }
  *   { type: 'markers', id, markers, stats, data: ArrayBuffer }  // `data` transferred back
  *   { type: 'error', id, name, message, details }
  */
@@ -69,7 +69,11 @@ self.addEventListener('message', async (event) => {
         id,
         dictionary: dictionary.name,
         ids: dictionary.ids.length,
-        maxCorrectionBits: detector.maxHammingDistance,
+        // intrinsic to the code set...
+        maxCorrectionBits: dictionary.maxCorrectionBits,
+        // ...versus the bound this detector will actually apply, which the
+        // maxHammingDistance option can override in either direction
+        maxHammingDistance: detector.maxHammingDistance,
         warnings: dictionary.warnings,
       });
       return;
@@ -80,8 +84,15 @@ self.addEventListener('message', async (event) => {
       const dictionary = detector.dictionary;
       detector.dispose();
       detector = new Detector({ dictionary, ...(msg.options || {}) });
-      post({ type: 'ready', id, dictionary: dictionary.name, ids: dictionary.ids.length,
-        maxCorrectionBits: detector.maxHammingDistance, warnings: dictionary.warnings });
+      post({
+        type: 'ready',
+        id,
+        dictionary: dictionary.name,
+        ids: dictionary.ids.length,
+        maxCorrectionBits: dictionary.maxCorrectionBits,
+        maxHammingDistance: detector.maxHammingDistance,
+        warnings: dictionary.warnings,
+      });
       return;
     }
 
