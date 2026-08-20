@@ -1,0 +1,358 @@
+{
+ "adapter": "legacy",
+ "dictionary": "CHILITAGS",
+ "detectorOpts": {},
+ "summary": {
+  "cases": 27,
+  "expected": 26,
+  "truePositives": 0,
+  "falsePositives": 35,
+  "recall": 0
+ },
+ "rows": [
+  {
+   "case": "size:24",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:32",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:48",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:64",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:90",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:120",
+   "want": [
+    0
+   ],
+   "got": [
+    682
+   ],
+   "hit": 0,
+   "extra": 1,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:180",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "size:240",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "tilt:0",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "tilt:20",
+   "want": [
+    0
+   ],
+   "got": [
+    682
+   ],
+   "hit": 0,
+   "extra": 1,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "tilt:40",
+   "want": [
+    0
+   ],
+   "got": [
+    682
+   ],
+   "hit": 0,
+   "extra": 1,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "tilt:55",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "roll:0",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "roll:15",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "roll:45",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "roll:75",
+   "want": [
+    0
+   ],
+   "got": [
+    682
+   ],
+   "hit": 0,
+   "extra": 1,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "blur:0",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "blur:1",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "blur:2",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "noise:0",
+   "want": [
+    0
+   ],
+   "got": [
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 2,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "noise:40",
+   "want": [
+    0
+   ],
+   "got": [
+    682
+   ],
+   "hit": 0,
+   "extra": 1,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "noise:90",
+   "want": [
+    0
+   ],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "multi:0+1+2+3",
+   "want": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "got": [
+    682,
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 3,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "texture:8px",
+   "want": [],
+   "got": [],
+   "hit": 0,
+   "extra": 0,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "texture:16px",
+   "want": [],
+   "got": [
+    682,
+    682,
+    682,
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 5,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "texture:32px",
+   "want": [],
+   "got": [
+    682,
+    682,
+    682,
+    682,
+    682
+   ],
+   "hit": 0,
+   "extra": 5,
+   "error": null,
+   "corners": null
+  },
+  {
+   "case": "blacksquare",
+   "want": [],
+   "got": [
+    682
+   ],
+   "hit": 0,
+   "extra": 1,
+   "error": null,
+   "corners": null
+  }
+ ]
+}

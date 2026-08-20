@@ -1,47 +1,34 @@
-# JS-ARUCO2 sample on NodeJS
+# Node stream detection sample
 
-This sample demonstrate how to use [js-aruco2](https://github.com/damianofalcioni/js-aruco2) in a NodeJS application to detect markers on a video stream generated with [FFMPEG](https://ffmpeg.org).
+Detects markers from an ffmpeg rawvideo stream.
 
-## Requirements
-- FFMPEG installed or `ffmpeg` executable available in this folder
-- NodeJS + NPM
+```bash
+export ARUCO_TOKEN=$(head -c 24 /dev/urandom | base64)
+npm run server          # terminal 1
+npm run stream_unix     # terminal 2  (stream_osx / stream_win)
+```
+
+The server refuses to start without `ARUCO_TOKEN`, and every request must carry
+`Authorization: Bearer $ARUCO_TOKEN`. The pre-3.0 version put a shared secret in
+the URL path — where it lands in access logs, proxies and browser history — and
+left the debug snapshot endpoint entirely unauthenticated.
+
+Set `ARUCO_DEBUG_SNAPSHOT=1` to enable `/snapshot.json`.
 
 ## Configuration
 
-- Configure your camera input editing the `config.camera`, `config.cameraWidth` and `config.cameraHeight` parameters in the `package.json` (instructions for setting the camera on different OS are available in the `package.json`).
+| Variable | Default |
+| --- | --- |
+| `ARUCO_TOKEN` | *(required)* |
+| `PORT` | 8081 |
+| `CAMERA_WIDTH` / `CAMERA_HEIGHT` | 640 / 480 |
+| `ARUCO_DICTIONARY` | `DICT_5X5_50` |
+| `ARUCO_DEBUG_SNAPSHOT` | off |
 
-- Optionally configure the server port (default `8081`) editing the `config.port` attribute.
+The pixel format must match: `-pix_fmt rgba` and the declared width/height, or
+the decoder assembles misaligned frames. A dropped byte is recoverable —
+`StreamDecoder.resync()` discards the partial frame rather than splicing two
+together for the rest of the session, which is what the old implementation did.
 
-- Optionally change the endpoint secret editing the `config.secret` attribute, in order to avoid stream hijacking if deployed on centralized server.
-
-- Optionally change the ArUco markers dictionary used editing the `config.dictionaryName` attribute (default `ARUCO_MIP_36h12`). Available values are `ARUCO_MIP_36h12` and `ARUCO`.
-
-- Optionally change the default hamming distance of the selected dictionary editing the `config.maxHammingDistance` attribute.
-
-## Getting started
-1) Initialize the project:
-    ```
-    npm run init
-    ```
-2) Start the server:
-    ```
-    npm run server
-    ```
-3) Start the FFMPEG stream of your camera:
-    - For Window based OS:
-      ```
-      npm run stream_win
-      ```
-    - For Linux based OS:
-      ```
-      npm run stream_unix
-      ```
-    - For MacOS based OS:
-      ```
-      npm run stream_osx
-      ```
-4) The recognized markers are visualized in the console. Additionally (mainly for testing purposes) the last processed image will be continously saved as JPEG in this folder with name `camera_out.jpg`
-
-## Notes
-
-- In order to avoid frames dropping and not overload the system, `ffmpeg` will send 1 frame per second to the server.
+No `jpeg-js` dependency any more: the sample no longer re-encodes every frame to
+disk just to show a debug image.

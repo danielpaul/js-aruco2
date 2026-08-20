@@ -1,122 +1,109 @@
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Augmented Reality Marker Creator</title>
-  <script type="text/javascript" src="../../src/cv.js"></script> 
-  <script type="text/javascript" src="../../src/aruco.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/apriltag_16h5.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/apriltag_25h7.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/apriltag_25h9.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/apriltag_36h9.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/apriltag_36h10.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/apriltag_36h11.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/artag.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/artoolkitplus.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/artoolkitplusbch.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_4x4_1000.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_5x5_1000.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_6x6_1000.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_7x7_1000.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_default_opencv.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_mip_16h3.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/aruco_mip_25h7.js"></script> 
-  <script type="text/javascript" src="../../src/dictionaries/chilitags.js"></script> 
-  
-  <style>
-svg {
-  height:100%;
-  width: 100%;
-}
-#markerSVG {
-  height: 80%;
-  width: 80%;
-}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>js-aruco2 — marker creator</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 24px; font: 15px/1.5 system-ui, sans-serif; }
+  .panel { display: flex; gap: 16px; flex-wrap: wrap; align-items: end; margin-bottom: 20px; }
+  label { display: grid; gap: 4px; font-size: 13px; }
+  input, select { font: inherit; padding: 4px 6px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  figure { margin: 0; text-align: center; }
+  figure svg { width: 140px; height: 140px; background: #fff; border: 1px solid #8884; }
+  figcaption { font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .warn { color: #9c6404; font-size: 13px; }
+  @media print {
+    .panel, .warn, h1 { display: none; }
+    figure svg { border: none; }
+  }
+</style>
 </head>
-<body style="font-family: monospace;">
-  <center>
-    <div style="margin: 10px;"><strong>-= Augmented Reality Marker Creator =-</strong></div>
-    <br>
-    <table>
-      <tr><td>Dictionary: </td><td><select id="dictionarySelect"></td></tr>
-      <tr><td>Code ID: </td><td><input type="number" id="idInput" min="0"> <span id="maxIDSpan"></span></td></tr>
-      <tr><td><input type="button" id="downloadBtn" value="Download"></td><td></td></tr>
-    </table>
-    <div id="markerSVG"></div>
-    <div style="margin: 15px;"><strong>Powered by <a href="https://damianofalcioni.github.io/js-aruco2/">js-aruco2</a></strong></div>
-  </center>
-  <script>
-    var markerSVG = document.getElementById("markerSVG");
-    var dictionarySelect = document.getElementById("dictionarySelect");
-    var idInput = document.getElementById("idInput");
-    var maxIDSpan = document.getElementById("maxIDSpan");
-    var downloadBtn = document.getElementById("downloadBtn");
-    var dictionary = null;
+<body>
 
-    var urlParams = new URLSearchParams(window.location.search);
-    var dictionaryParam = urlParams.get('dictionary');
-    var idParam = urlParams.get('id');
+<h1>Marker creator</h1>
 
-    dictionarySelect.addEventListener('change', function () {
-      try {
-        idInput.value = 0;
-        dictionary = new AR.Dictionary(dictionarySelect.value);
-        idInput.setAttribute("max", dictionary.codeList.length-1);
-        maxIDSpan.innerHTML = 'MAX=' + (dictionary.codeList.length-1);
-        if (idParam)
-          idInput.value = idParam;
-        idInput.dispatchEvent(new Event("change"));
-      } catch (e) {
-        alert(e);
-      }
-    });
+<div class="panel">
+  <label>Dictionary <select id="dictionary"></select></label>
+  <label>First id <input type="number" id="from" value="0" min="0" style="width: 6em"></label>
+  <label>Count <input type="number" id="count" value="12" min="1" max="200" style="width: 6em"></label>
+  <label>Size (mm) <input type="number" id="mm" value="50" min="5" style="width: 6em"></label>
+  <button id="print">Print</button>
+  <button id="download">Download SVG</button>
+</div>
 
-    idInput.addEventListener('change', function () {
-      try {
-        if (dictionary)
-          markerSVG.innerHTML = dictionary.generateSVG(idInput.value);
-      } catch (e) {
-        alert(e);
-      }
-    });
+<p id="info" class="warn"></p>
+<div class="grid" id="grid"></div>
 
-    downloadBtn.addEventListener('click', function () {
-      download(markerSVG.innerHTML, dictionarySelect.value + '_ID' + idInput.value + '.svg', 'image/svg');
-    });
+<script type="module">
+import { Dictionary } from '../../src/index.js';
+import { loadDictionaryDefinition, DICTIONARY_NAMES } from '../../src/dictionaries/index.js';
 
-    dictionarySelect.innerHTML = '';
-    Object.keys(AR.DICTIONARIES).forEach(function (dictionaryName) {
-      var option = document.createElement("option");
-      option.text = dictionaryName;
-      option.value = dictionaryName;
-      dictionarySelect.appendChild(option);
-    });
-    if (dictionaryParam) {
-      dictionarySelect.value = dictionaryParam;
-      if (! dictionarySelect.value)
-        throw 'The dictionary "'+dictionaryParam+'" is invalid';
-    }
-    dictionarySelect.dispatchEvent(new Event("change"));
+const $ = (id) => document.getElementById(id);
 
-    var download = function (data, filename, type) {
-      var file = new Blob([data], {
-        type: type
-      });
-      if (window.navigator.msSaveOrOpenBlob) // IE10+
-        window.navigator.msSaveOrOpenBlob(file, filename);
-      else { // Others
-        var a = document.createElement("a"),
-          url = URL.createObjectURL(file);
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function () {
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        }, 0);
-      }
-    };
-  </script>
+for (const name of DICTIONARY_NAMES) {
+  $('dictionary').append(new Option(name, name, name === 'DICT_5X5_50', name === 'DICT_5X5_50'));
+}
+
+// deep-link support: ?dictionary=DICT_5X5_50&from=0&count=12
+const params = new URLSearchParams(location.search);
+if (params.get('dictionary')) $('dictionary').value = params.get('dictionary');
+for (const k of ['from', 'count', 'mm']) if (params.get(k)) $(k).value = params.get(k);
+
+let dict = null;
+
+async function render() {
+  const def = await loadDictionaryDefinition($('dictionary').value);
+  dict = new Dictionary(def);
+
+  const from = Math.max(0, Number($('from').value) | 0);
+  const count = Math.min(200, Math.max(1, Number($('count').value) | 0));
+  const mm = Number($('mm').value);
+
+  const notes = [`${dict.length} ids · ${dict.gridSize}×${dict.gridSize} grid · ` +
+    `corrects up to ${dict.maxCorrectionBits} bit error${dict.maxCorrectionBits === 1 ? '' : 's'}`];
+  if (dict.warnings.length) notes.push(...dict.warnings);
+  $('info').textContent = notes.join(' — ');
+
+  const figures = [];
+  for (let i = 0; i < count; i++) {
+    const id = dict.ids[from + i];
+    if (id === undefined) break;
+    const fig = document.createElement('figure');
+    fig.innerHTML = dict.toSVG(id, { moduleSize: 10 });
+    const cap = document.createElement('figcaption');
+    // the printed side length includes the quiet zone
+    const modules = dict.gridSize + 2 + 2;
+    cap.textContent = `id ${id} · ${mm} mm · ${(mm / modules).toFixed(1)} mm/module`;
+    fig.append(cap);
+    figures.push(fig);
+  }
+  $('grid').replaceChildren(...figures);
+}
+
+for (const id of ['dictionary', 'from', 'count', 'mm']) {
+  $(id).addEventListener('change', render);
+}
+$('print').addEventListener('click', () => print());
+$('download').addEventListener('click', () => {
+  const id = dict.ids[Math.max(0, Number($('from').value) | 0)];
+  const blob = new Blob([dict.toSVG(id, { moduleSize: 10 })], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), {
+    href: url,
+    download: `${dict.name}-${id}.svg`,
+  });
+  // Firefox needs the anchor in the document, and revoking synchronously after
+  // click() can cancel the download before it starts.
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+});
+
+render();
+</script>
 </body>
-  
 </html>

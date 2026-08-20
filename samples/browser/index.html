@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>js-aruco2 — webcam detection</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; padding: 24px;
+    font: 15px/1.5 system-ui, sans-serif;
+    display: grid; gap: 20px; justify-items: center;
+  }
+  .stage { position: relative; max-width: 100%; }
+  video { display: block; max-width: 100%; height: auto; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .panel { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; }
+  .panel label { display: flex; gap: 6px; align-items: center; }
+  output { font-variant-numeric: tabular-nums; }
+  #status { min-height: 1.5em; }
+  #status[data-kind="error"] { color: #c1341c; font-weight: 600; }
+  ul { list-style: none; padding: 0; margin: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+  li { padding: 4px 10px; border: 1px solid currentColor; border-radius: 3px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<h1>js-aruco2</h1>
+
+<div class="panel">
+  <label>Dictionary
+    <select id="dictionary"></select>
+  </label>
+  <label>Half resolution
+    <input type="checkbox" id="half" checked>
+  </label>
+  <label>Max Hamming
+    <input type="number" id="maxHamming" min="0" max="12" style="width: 4em">
+  </label>
+  <button id="start">Start camera</button>
+</div>
+
+<p id="status" role="status"></p>
+
+<div class="stage">
+  <video id="video" playsinline muted></video>
+  <canvas id="overlay"></canvas>
+</div>
+
+<ul id="markers"></ul>
+<p><output id="timing"></output></p>
+
+<script type="module">
+import { Detector, Dictionary } from '../../src/index.js';
+import { loadDictionaryDefinition, DICTIONARY_NAMES } from '../../src/dictionaries/index.js';
+
+const $ = (id) => document.getElementById(id);
+const video = $('video'), overlay = $('overlay'), status = $('status');
+const ctx = overlay.getContext('2d');
+
+// populate the dictionary picker, defaulting to the OpenCV 5x5 set
+for (const name of DICTIONARY_NAMES) {
+  const opt = new Option(name, name, name === 'DICT_5X5_50', name === 'DICT_5X5_50');
+  $('dictionary').append(opt);
+}
+
+let detector = null;
+let stream = null;
+let work = null;               // offscreen canvas we read pixels from
+let running = false;
+
+function say(text, kind = 'info') {
+  status.textContent = text;
+  status.dataset.kind = kind;
+}
+
+async function buildDetector() {
+  const def = await loadDictionaryDefinition($('dictionary').value);
+  const dictionary = new Dictionary(def);
+  const half = $('half').checked;
+  detector = new Detector({
+    dictionary,
+    // a downscaled frame has less local contrast, so the threshold offset
+    // has to come up with it
+    adaptiveThresholdOffset: half ? 12 : 7,
+    maxHammingDistance: Number($('maxHamming').value),
+  });
+  if (dictionary.warnings.length) {
+    console.warn(`${dictionary.name}:`, dictionary.warnings);
+  }
+  return detector;
+}
+
+$('dictionary').addEventListener('change', async () => {
+  const def = await loadDictionaryDefinition($('dictionary').value);
+  $('maxHamming').value = new Dictionary(def).maxCorrectionBits;
+  if (running) await buildDetector();
+});
+$('half').addEventListener('change', () => { if (running) buildDetector(); });
+$('maxHamming').addEventListener('change', () => { if (running) buildDetector(); });
+$('dictionary').dispatchEvent(new Event('change'));
+
+$('start').addEventListener('click', async () => {
+  if (running) return;
+  try {
+    say('Requesting camera…');
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+  } catch (err) {
+    // the pre-3.0 samples console.log'd this and rendered a blank canvas forever
+    const messages = {
+      NotAllowedError: 'Camera permission denied. Allow access and reload.',
+      NotFoundError: 'No camera found on this device.',
+      NotReadableError: 'The camera is in use by another application.',
+      SecurityError: 'Camera access needs https or localhost.',
+    };
+    say(messages[err.name] || err.message, 'error');
+    return;
+  }
+
+  video.srcObject = stream;
+  await video.play();
+  running = true;
+  $('start').disabled = true;
+  await buildDetector();
+  say(`Detecting with ${detector.dictionary.name}`);
+  pump();
+});
+
+addEventListener('pagehide', () => {
+  // stop the track so the camera indicator goes out
+  stream?.getTracks().forEach((t) => t.stop());
+  running = false;
+});
+
+let lastTimes = [];
+
+function pump() {
+  const step = () => {
+    if (!running) return;
+    if (video.readyState >= 2) detectFrame();
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(step);
+    else requestAnimationFrame(step);
+  };
+  step();
+}
+
+function detectFrame() {
+  const scale = $('half').checked ? 0.5 : 1;
+  const w = Math.round(video.videoWidth * scale);
+  const h = Math.round(video.videoHeight * scale);
+  if (!w || !h) return;
+
+  if (!work || work.width !== w || work.height !== h) {
+    work = Object.assign(document.createElement('canvas'), { width: w, height: h });
+    // repeated getImageData needs this hint or it falls off the fast path
+    work.ctx = work.getContext('2d', { willReadFrequently: true });
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+  }
+  work.ctx.drawImage(video, 0, 0, w, h);
+
+  const t0 = performance.now();
+  const markers = detector.detect(work.ctx.getImageData(0, 0, w, h));
+  const dt = performance.now() - t0;
+
+  lastTimes.push(dt);
+  if (lastTimes.length > 30) lastTimes.shift();
+  const avg = lastTimes.reduce((a, b) => a + b, 0) / lastTimes.length;
+  $('timing').textContent =
+    `${w}x${h} · ${avg.toFixed(1)} ms/frame · ${detector.stats.contours} contours · ` +
+    `${detector.stats.candidates} candidates`;
+
+  draw(markers, 1 / scale);
+}
+
+function draw(markers, upscale) {
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  ctx.lineWidth = 3;
+  ctx.font = '16px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+
+  for (const m of markers) {
+    const pts = m.corners.map((p) => ({ x: p.x * upscale, y: p.y * upscale }));
+    ctx.strokeStyle = '#00c46a';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    ctx.stroke();
+
+    // mark the first corner so orientation is visible
+    ctx.fillStyle = '#c1341c';
+    ctx.beginPath();
+    ctx.arc(pts[0].x, pts[0].y, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    const cx = pts.reduce((a, p) => a + p.x, 0) / 4;
+    const cy = pts.reduce((a, p) => a + p.y, 0) / 4;
+    ctx.fillStyle = '#00c46a';
+    ctx.fillText(`${m.id}${m.hammingDistance ? ` (h${m.hammingDistance})` : ''}`, cx, cy);
+  }
+
+  $('markers').replaceChildren(...markers.map((m) => {
+    const li = document.createElement('li');
+    li.textContent = `id ${m.id} · h${m.hammingDistance}`;
+    return li;
+  }));
+}
+</script>
+</body>
+</html>

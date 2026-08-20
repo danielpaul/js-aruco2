@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test test/dictionary.test.js test/detector.test.js test/stream.test.js test/pose.test.js
+
+  golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Detection results are a contract. This diffs the current build against
+      # the recorded 2.x baseline and prints every id-level change.
+      - run: npm run test:golden
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm i --no-save playwright
+      - run: npx playwright install --with-deps chromium
+      - run: node --test test/browser.test.js
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Assert every path package.json promises actually got built. Without this,
+      # the exports map can point at a .d.ts the build never emits and CI stays green.
+      - name: verify exports map resolves against the build
+        run: |
+          node -e "
+          const fs = require('fs'), pkg = require('./package.json');
+          const paths = new Set();
+          for (const field of ['main', 'module', 'types']) if (pkg[field]) paths.add(pkg[field]);
+          for (const [key, val] of Object.entries(pkg.exports ?? {})) {
+            const entries = typeof val === 'string' ? [val] : Object.values(val);
+            for (const p of entries) paths.add(p.replace('*', 'dict-5x5-50'));
+          }
+          let bad = 0;
+          for (const p of [...paths].sort()) {
+            const ok = fs.existsSync(p);
+            console.log((ok ? '  ok      ' : '  MISSING ') + p);
+            if (!ok) bad++;
+          }
+          if (bad) { console.error(bad + ' path(s) named by package.json were not built'); process.exit(1); }
+          "
+      # the dictionary modules are generated; fail if they drifted from source
+      - run: npm run build:dictionaries && git diff --exit-code src/dictionaries
+
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run bench

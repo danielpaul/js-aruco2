@@ -1,0 +1,6 @@
+legacy/
+samples/
+scripts/
+test/
+.github/
+tsconfig*.json
