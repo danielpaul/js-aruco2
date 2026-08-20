@@ -12,6 +12,11 @@ marker set you define.
 npm install @danielpaul/js-aruco2
 ```
 
+**This is version 3.** It is a rewrite of the 2.x library that finds markers 2.x
+missed, stops reporting ones that were never there, and ships as a module you
+can import. [What's new in 3.0](#whats-new-in-30) has the measurements;
+[Migrating from 2.x](#migrating-from-2x) has the API changes.
+
 ---
 
 ## Quick start
@@ -43,6 +48,88 @@ Each result is:
   rotation: number,                        // quarter turns applied to align the code
 }
 ```
+
+---
+
+## What's new in 3.0
+
+The detection pipeline is unchanged in spirit. What changed is that it now
+returns correct results, can be imported, and runs off the main thread.
+
+### It finds more markers, and stops inventing them
+
+Same frames, same battery, 2.x baseline (kept in `legacy/`) against 3.0. Recall
+is over the 26 markers the battery expects across 22 single-marker frames and
+one four-marker frame; false positives are extra ids anywhere in the battery,
+including three marker-free texture frames and a solid black square.
+`npm run test:golden` reproduces this table and fails the build on any drift.
+
+| Dictionary | 2.x recall / FP | 3.0 recall / FP |
+| --- | --- | --- |
+| `ARUCO_MIP_36h12` | 84.6% / 37 | **96.2% / 0** |
+| `CHILITAGS` | 0.0% / 35 | **96.2% / 0** |
+| `ARUCO_7X7_1000` | 80.8% / 0 | **96.2% / 0** |
+| `ARUCO` | 96.2% / 0 | 96.2% / 0 |
+| `ARUCO_5X5_1000` | 96.2% / 0 | 96.2% / 0 |
+
+What was behind those numbers:
+
+- The acceptance bound was `tau − 1`, treating the dictionary's minimum
+  inter-code distance as an error budget. 14 of the 20 bundled dictionaries
+  therefore matched *any* random bit pattern to some id. It is now
+  `floor((tau − 1) / 2)`, with `tau` taken over all four relative rotations
+  because `find()` matches every rotation, and it agrees with OpenCV's declared
+  `maxCorrectionBits` for all 16 predefined sets.
+- `warpSize` was hardcoded to 49 instead of derived from the dictionary grid, so
+  CHILITAGS sampled the wrong cells and decoded nothing — while every solid dark
+  rectangle decoded as its all-zero code at distance 0.
+- The warp sampled one pixel off in both axes and read out of bounds on the last
+  row and column.
+- Candidates were deduplicated by a fixed 10 px threshold *before* decoding,
+  which discarded the decodable quad in favour of its quiet-zone neighbour.
+  Smallest reliable marker: 70 px → **12 px**.
+- `svd.js` carried an unconverted 1-based loop that threw `TypeError` on 9.7% of
+  fuzzed inputs.
+- POSIT converged on a rounded-integer residual and reported it as `bestError`,
+  so `bestError` read 0 for poses up to 35° wrong. Convergence and the reported
+  error are sub-pixel floats now.
+- `detect()` validates its input. A 16-byte buffer claiming to be 8000×8000 used
+  to allocate ~2 GB and block for ten seconds.
+- ARTag's 57 duplicate codes are dropped with a warning instead of collapsing
+  `tau` to 0 and silently disabling error correction.
+
+### It imports
+
+ESM throughout, with an exports map, `.d.ts` types and a CJS build for
+`require`. Importing 2.x as ESM threw `TypeError`. Dictionaries are
+side-effect-free data modules rather than globals a bundler could drop, so
+`sideEffects: false` is now true rather than a runtime crash — a webpack 5
+one-dictionary bundle went 26.5 KB → 17.9 KB and loads. The tarball went
+387 KB → 218 KB with the vendored three.js copy removed, and the licence is a
+valid SPDX expression now that the LGPL-only `posit2.js` is gone.
+
+### It is faster
+
+| | 2.x → 3.0 |
+| --- | --- |
+| Dictionary match, per candidate | **197–249×** (all four rotations precomputed into uint32 lanes) |
+| `ARTOOLKITPLUSBCH` construction | 3599 ms → **36 ms** (`tau` computed at build time) |
+| Stream ingestion | **142×** (`TypedArray.set`) |
+| `detect()` end to end | 1.07× on clean frames, **2.0–2.5×** on noisy ones |
+
+Contour points live in flat `Int32Array` pools instead of one object per point,
+and grayscale is Q16 fixed-point, bit-identical to the float form. Every
+hardcoded pipeline constant is an option, which is what makes half-resolution
+input viable — worth roughly another 3× on its own. See [Tuning](#tuning).
+
+### It has more surface
+
+The OpenCV `DICT_4X4`/`5X5`/`6X6`/`7X7` families at all four sizes (including
+`DICT_5X5_50`), a Web Worker entry point, the `useArucoDetector` / `useCamera` /
+`useVideoFrameLoop` hooks, and `StreamDecoder` / `MJPEGDemuxer` in place of the
+old stream methods — the MJPEG path threw `TypeError` on its first call and had
+never run. Behind it: 70 tests, the golden A/B harness above, browser-level
+worker verification (skipped when Playwright is unavailable), and CI.
 
 ---
 
