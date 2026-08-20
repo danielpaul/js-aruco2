@@ -108,3 +108,22 @@ test('svdcmp survives the inputs that used to throw', () => {
   }
   assert.ok(worst < 1e-12, `reconstruction error ${worst.toExponential(2)} should stay at machine precision`);
 });
+
+test('bestError is a sub-pixel residual, not a rounded integer', () => {
+  // The initial convergence test used the rounded-integer residual, so a pose
+  // whose projection happened to round onto the observed pixels exited before a
+  // single refinement step and reported bestError 0 for a visibly wrong pose.
+  const p = new Posit(35, 640);
+  const Z = 500, half = 17.5, t = (25 * Math.PI) / 180;
+  const R = [[1, 0, 0], [0, Math.cos(t), -Math.sin(t)], [0, Math.sin(t), Math.cos(t)]];
+  const obj = [[-half, half, 0], [half, half, 0], [half, -half, 0], [-half, -half, 0]];
+  const pts = obj.map((o, i) => {
+    const m = [0, 1, 2].map((j) => R[j][0] * o[0] + R[j][1] * o[1] + R[j][2] * o[2] + (j === 2 ? Z : 0));
+    // nudge under half a pixel: rounding is unchanged, the residual is not
+    return { x: (640 * m[0]) / m[2] + (i % 2 ? 0.42 : -0.42), y: (640 * m[1]) / m[2] + (i < 2 ? 0.42 : -0.42) };
+  });
+  const pose = p.pose(pts);
+  assert.ok(!Number.isInteger(pose.bestError), `bestError ${pose.bestError} is a float`);
+  assert.ok(pose.bestError > 0, 'a genuinely offset pose does not report zero error');
+  assert.ok(Math.abs(pose.bestTranslation[2] - Z) < 15, `Z ${pose.bestTranslation[2]} near ${Z}`);
+});

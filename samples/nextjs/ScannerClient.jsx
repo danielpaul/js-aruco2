@@ -27,17 +27,16 @@ export default function ScannerClient({
   const { markers, ready, error, detect, stats } = useArucoDetector({
     dictionary,
     // a downscaled frame has less local contrast, so the ink threshold rises with it
+    halfResolution,
     options: { adaptiveThresholdOffset: halfResolution ? 12 : 7 },
   });
 
   const canvasRef = useRef(null);
-  const scaleRef = useRef(1);
   const [fps, setFps] = useState(0);
   const framesRef = useRef({ n: 0, t: performance.now() });
 
   // Feed the worker. Frames arriving while it is busy are dropped by the hook.
   const onFrame = useCallback((video) => {
-    scaleRef.current = halfResolution ? 0.5 : 1;
     detect(video);
 
     const f = framesRef.current;
@@ -48,7 +47,7 @@ export default function ScannerClient({
       f.n = 0;
       f.t = now;
     }
-  }, [detect, halfResolution]);
+  }, [detect]);
 
   useVideoFrameLoop(videoRef, onFrame, ready && cameraReady);
 
@@ -70,9 +69,9 @@ export default function ScannerClient({
     ctx.font = '16px system-ui, sans-serif';
     ctx.textAlign = 'center';
 
-    const up = 1 / scaleRef.current;
     for (const m of markers) {
-      const pts = m.corners.map((p) => ({ x: p.x * up, y: p.y * up }));
+      // corners already arrive in the video's own coordinate space
+      const pts = m.corners;
       ctx.strokeStyle = '#00c46a';
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);

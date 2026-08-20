@@ -196,7 +196,10 @@ export class MJPEGDemuxer {
   _finishImage() {
     if (this._inImage && this._len > 0 && this._len <= this.maxImageBytes) {
       this.images++;
-      this.onImage(this._buf.subarray(0, this._len));
+      // An owned copy, not a view: `_buf` is reused for the next image, and JPEG
+      // decoding is asynchronous in every real consumer, so handing out a view
+      // silently corrupts the bytes under anyone who awaits before reading them.
+      this.onImage(this._buf.slice(0, this._len));
     }
     this._inImage = false;
     this._len = 0;

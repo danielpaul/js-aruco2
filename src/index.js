@@ -25,7 +25,7 @@
 export { Detector, DEFAULT_OPTIONS, validateImage } from './detector.js';
 export { Dictionary, packBits } from './dictionary.js';
 export { GrayImage } from './cv.js';
-export { StreamDecoder } from './stream.js';
+export { StreamDecoder, MJPEGDemuxer } from './stream.js';
 export { Posit, Pose } from './posit.js';
 export {
   ArucoError,

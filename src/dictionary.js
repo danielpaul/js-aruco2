@@ -171,9 +171,16 @@ export class Dictionary {
       const bits = toBits(source[i], nBits, i, name);
       const key = laneKey(packBits(bits, lanes), lanes);
       const seen = exact.get(key);
-      if (seen !== undefined && seen.rotation === 0) {
+      if (seen !== undefined) {
+        // `exact` already holds all four rotations of every earlier code, so a hit
+        // at any rotation means find() would return that earlier id instead of this
+        // one. Rotational duplicates are exactly as unreachable as byte-identical
+        // ones, so both are dropped.
         this.warnings.push(
-          `code ${i} duplicates code ${seen.id}; id ${i} is unreachable and has been dropped`
+          seen.rotation === 0
+            ? `code ${i} duplicates code ${seen.id}; id ${i} is unreachable and has been dropped`
+            : `code ${i} is rotation ${seen.rotation} of code ${seen.id}; ` +
+              `id ${i} is unreachable and has been dropped`
         );
         continue;
       }
@@ -220,11 +227,32 @@ export class Dictionary {
     /**
      * Bit errors the dictionary can correct without ambiguity. Matches OpenCV's
      * per-dictionary maxCorrectionBits for every bundled set we cross-checked.
+     *
+     * A declared value is honoured only when it is within the bound the EFFECTIVE
+     * tau supports — the tau after unreachable codes were dropped. A definition
+     * generated before dedup can carry a radius that no longer describes the
+     * dictionary being built (ARTAG shipped -1, from a pre-dedup tau of 0), and
+     * silently keeping it would disable correction the code set actually supports.
      */
-    this.maxCorrectionBits =
-      def.maxCorrectionBits != null
-        ? def.maxCorrectionBits
-        : Math.floor((this.tau - 1) / 2);
+    const safeRadius = Math.max(0, Math.floor((this.tau - 1) / 2));
+    const declared = def.maxCorrectionBits;
+    if (declared == null) {
+      this.maxCorrectionBits = safeRadius;
+    } else if (!Number.isInteger(declared) || declared < 0) {
+      this.warnings.push(
+        `declared maxCorrectionBits ${declared} is not a non-negative integer; ` +
+        `using ${safeRadius} from the computed tau of ${this.tau}`
+      );
+      this.maxCorrectionBits = safeRadius;
+    } else if (declared > safeRadius) {
+      this.warnings.push(
+        `declared maxCorrectionBits ${declared} exceeds the ${safeRadius} that a tau ` +
+        `of ${this.tau} supports; clamped to ${safeRadius}`
+      );
+      this.maxCorrectionBits = safeRadius;
+    } else {
+      this.maxCorrectionBits = declared;
+    }
   }
 
   /** Payload bits for an id, row-major, 1 === white. Used by tests and SVG output. */
@@ -273,7 +301,17 @@ export class Dictionary {
     return bestId < 0 ? null : { id: bestId, rotation: bestRot, distance: bestDist };
   }
 
-  /** Minimum inter-code Hamming distance, over packed lanes. */
+  /**
+   * Minimum inter-code Hamming distance, over packed lanes.
+   *
+   * `find()` matches an observation against all four rotations of every code, so
+   * two codes are confusable when ANY rotation of one is close to ANY rotation of
+   * the other. Rotating both by the same amount preserves distance, so comparing
+   * rotation 0 of `i` against all four rotations of `j` covers every relative
+   * rotation. Comparing only the canonical orientations — as this did before —
+   * reports an inflated tau, and therefore an unsafe correction radius, for any
+   * dictionary whose codes come closer under rotation.
+   */
   _computeTau() {
     const lanes = this.lanes;
     const packed = this.packed;
@@ -281,10 +319,12 @@ export class Dictionary {
     for (let i = 0; i < this.size; i++) {
       const a = i * 4 * lanes;
       for (let j = i + 1; j < this.size; j++) {
-        const b = j * 4 * lanes;
-        let d = 0;
-        for (let l = 0; l < lanes; l++) d += popcount((packed[a + l] ^ packed[b + l]) >>> 0);
-        if (d < tau) { tau = d; if (tau === 0) return 0; }
+        for (let r = 0; r < 4; r++) {
+          const b = (j * 4 + r) * lanes;
+          let d = 0;
+          for (let l = 0; l < lanes; l++) d += popcount((packed[a + l] ^ packed[b + l]) >>> 0);
+          if (d < tau) { tau = d; if (tau === 0) return 0; }
+        }
       }
     }
     return tau === Infinity ? 0 : tau;

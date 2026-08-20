@@ -23,6 +23,15 @@ const OPENCV_EXPECTED = {
   DICT_7X7_250: { tau: 17, corr: 8 }, DICT_7X7_1000: { tau: 14, corr: 6 },
 };
 
+function rotate90(bits, n) {
+  const out = new Array(n * n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) out[y * n + x] = bits[(n - 1 - x) * n + y];
+  return out;
+}
+function hamming(a, b) { let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++; return d; }
+function bitsToHex(bits) { return parseInt(bits.join(''), 2); }
+const SMALL_CODES = [0x1084210, 0x1084217, 0x10842f0, 0x1085e10];
+
 test('OpenCV predefined dictionaries match OpenCV tau and maxCorrectionBits', async () => {
   for (const [name, want] of Object.entries(OPENCV_EXPECTED)) {
     const d = await loadDictionary(name);
@@ -190,4 +199,77 @@ test('toSVG emits a marker whose payload matches the code', async () => {
   const ones = d.bitsFor(3).reduce((a, b) => a + b, 0);
   assert.equal(white, ones + 1, 'one background rect plus one rect per set bit');
   assert.throws(() => d.toSVG(999), (e) => e instanceof InvalidDictionaryError);
+});
+
+/* ------------------------------------------------------------------ *
+ * Review follow-ups, round 2 (PR #1)
+ * ------------------------------------------------------------------ */
+
+test('tau is the minimum over all four relative rotations', async () => {
+  // ARUCO ids 255 and 1022 are 7 apart as stored but ONE bit apart when 1022 is
+  // rotated 180 degrees. find() matches every rotation, so the pair is
+  // confusable and tau must see it — comparing canonical orientations only
+  // reported 3 and licensed a correction radius that could decode the wrong id.
+  const def = await loadDictionaryDefinition('ARUCO');
+  const d = new Dictionary({ ...def, tau: null, maxCorrectionBits: null });
+  assert.equal(d.tau, 1);
+  assert.equal(d.maxCorrectionBits, 0);
+
+  const a = d.bitsFor(255);
+  let b = d.bitsFor(1022);
+  for (let r = 0; r < 2; r++) b = rotate90(b, d.gridSize);
+  assert.equal(hamming(a, b), 1);
+});
+
+test('a code that is a rotation of an earlier code is dropped', () => {
+  const base = [1,1,0,1,0, 0,1,1,0,1, 1,0,0,1,1, 0,1,1,1,0, 1,0,1,0,0];
+  const d = new Dictionary({
+    name: 'ROT', nBits: 25, tau: null, maxCorrectionBits: null,
+    codeList: [bitsToHex(base), bitsToHex(rotate90(base, 5))],
+  });
+  assert.equal(d.ids.length, 1, 'the rotated copy is unreachable');
+  assert.match(d.warnings.join('\n'), /rotation \d of code 0/);
+});
+
+test('a declared correction radius is never wider than tau supports', () => {
+  const def = { name: 'X', nBits: 25, tau: null, maxCorrectionBits: 9, codeList: SMALL_CODES };
+  const d = new Dictionary(def);
+  assert.equal(d.maxCorrectionBits, Math.max(0, Math.floor((d.tau - 1) / 2)));
+  assert.match(d.warnings.join('\n'), /exceeds the \d+ that a tau of \d+ supports/);
+});
+
+test('ARTAG ships a usable correction radius, not -1', async () => {
+  // The duplicate at id 1023 made the pre-dedup tau 0, so the generated module
+  // declared a radius of -1 and Detector rejected every non-exact observation —
+  // reintroducing the very bug this dictionary is the poster child for.
+  const def = await loadDictionaryDefinition('ARTAG');
+  assert.ok(def.maxCorrectionBits >= 0, `declared radius ${def.maxCorrectionBits} must be >= 0`);
+  const d = new Dictionary(def);
+  assert.ok(d.maxCorrectionBits >= 1, 'ARTAG supports at least one bit of correction');
+  assert.equal(d.ids.length, 1023, 'the duplicate is dropped');
+});
+
+test('every bundled dictionary declares a non-negative radius within its tau', async () => {
+  for (const name of DICTIONARY_NAMES) {
+    const def = await loadDictionaryDefinition(name);
+    const d = new Dictionary(def);
+    const safe = Math.max(0, Math.floor((d.tau - 1) / 2));
+    assert.ok(def.maxCorrectionBits >= 0, `${name} declares ${def.maxCorrectionBits}`);
+    assert.ok(def.maxCorrectionBits <= safe, `${name} declares ${def.maxCorrectionBits} > safe ${safe}`);
+    assert.equal(d.maxCorrectionBits, def.maxCorrectionBits, `${name} radius survives the build`);
+  }
+});
+
+test('loadDictionary returns one instance under concurrency', async () => {
+  const [a, b, c] = await Promise.all([
+    loadDictionary('DICT_5X5_50'), loadDictionary('DICT_5X5_50'), loadDictionary('DICT_5X5_50'),
+  ]);
+  assert.equal(a, b);
+  assert.equal(b, c);
+});
+
+test('a failed load does not poison the instance cache', async () => {
+  await assert.rejects(() => loadDictionary('NOT_A_DICTIONARY'));
+  const ok = await loadDictionary('DICT_5X5_50');
+  assert.equal(ok.name, 'DICT_5X5_50');
 });

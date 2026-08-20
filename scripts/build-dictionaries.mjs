@@ -17,6 +17,7 @@ import { createRequire } from 'node:module';
 import { writeFileSync, readdirSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { Dictionary } from '../src/dictionary.js';
 
 const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -77,16 +78,21 @@ function analyse(codeList, nBits) {
     for (let l = 0; l < lanes; l++) ones += popcount(packed[i][l] >>> 0);
     if (ones === 0 || ones === nBits) uniform.push(i);
   }
-  let tau = Infinity;
-  for (let i = 0; i < packed.length; i++) {
-    for (let j = i + 1; j < packed.length; j++) {
-      let d = 0;
-      for (let l = 0; l < lanes; l++) d += popcount((packed[i][l] ^ packed[j][l]) >>> 0);
-      if (d < tau) { tau = d; if (tau === 0) break; }
-    }
-    if (tau === 0) break;
-  }
-  return { tau: tau === Infinity ? 0 : tau, duplicates, uniform };
+  // Build the real Dictionary to derive tau and the correction radius, so the
+  // generated metadata is by construction what the runtime computes. Doing the
+  // arithmetic separately here is how ARTAG came to ship tau: 0 / radius: -1 —
+  // measured over the raw list, including a duplicate the runtime then drops.
+  const probe = new Dictionary({
+    name: 'probe', nBits, codeList, tau: null, maxCorrectionBits: null,
+  });
+  return {
+    tau: probe.tau,
+    maxCorrectionBits: probe.maxCorrectionBits,
+    reachable: probe.ids.length,
+    dropped: codeList.length - probe.ids.length,
+    duplicates,
+    uniform,
+  };
 }
 
 const HEADER = `/**
@@ -145,8 +151,16 @@ for (const fam of OPENCV_FAMILIES) {
   if (!src) { console.warn(`missing legacy ${fam.base}`); continue; }
   for (const [count, opencvMaxCorr] of fam.sizes) {
     const codeList = src.codeList.slice(0, count);
-    const { tau, duplicates, uniform } = analyse(codeList, fam.nBits);
-    const derived = Math.floor((tau - 1) / 2);
+    const { tau, maxCorrectionBits: derived, reachable, dropped, duplicates, uniform } =
+      analyse(codeList, fam.nBits);
+    if (dropped) throw new Error(`${name}: ${dropped} unreachable code(s) — OpenCV sets must be clean`);
+    if (derived !== opencvMaxCorr) {
+      throw new Error(
+        `${name}: derived correction radius ${derived} (tau ${tau}) disagrees with ` +
+        `OpenCV's declared maxCorrectionBits ${opencvMaxCorr}`
+      );
+    }
+    void reachable;
     const grid = Math.sqrt(fam.nBits);
     const name = `DICT_${grid}X${grid}_${count}`;
     const notes = [
@@ -181,10 +195,11 @@ for (const fam of OPENCV_FAMILIES) {
 const SKIP = new Set(OPENCV_FAMILIES.map((f) => f.base));
 for (const [name, src] of Object.entries(AR.DICTIONARIES)) {
   if (SKIP.has(name)) continue;
-  const { tau, duplicates, uniform } = analyse(src.codeList, src.nBits);
-  const derived = Math.floor((tau - 1) / 2);
+  const { tau, maxCorrectionBits: derived, reachable, dropped, duplicates, uniform } =
+    analyse(src.codeList, src.nBits);
   const notes = [
-    `Minimum inter-code Hamming distance (tau) = ${tau}, computed offline.`,
+    `Minimum inter-code Hamming distance (tau) = ${tau}, computed offline over all`,
+    `four relative rotations, after dropping codes find() can never reach.`,
     `Correctable radius floor((tau-1)/2) = ${derived}.`,
   ];
   if (src.tau != null && src.tau !== tau) {
@@ -196,6 +211,13 @@ for (const [name, src] of Object.entries(AR.DICTIONARIES)) {
   if (uniform.length) {
     notes.push(`Uniform (solid) codes: ${JSON.stringify(uniform)} — a solid quadrilateral`);
     notes.push(`decodes as these ids at distance 0 unless allowUniformCodes is false.`);
+  }
+  if (dropped) {
+    notes.push(
+      `${dropped} of ${src.codeList.length} codes are unreachable and are dropped at ` +
+      `load time, leaving ${reachable}; tau and the radius above describe the ` +
+      `reachable set, not the raw list.`
+    );
   }
   emit(name, { nBits: src.nBits, tau, maxCorrectionBits: derived, codeList: src.codeList }, notes);
   generated.push({ name, nBits: src.nBits, count: src.codeList.length, tau, derived });

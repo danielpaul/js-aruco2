@@ -7,7 +7,8 @@
  */
 
 /*
- * Minimum inter-code Hamming distance (tau) = 3, computed offline.
+ * Minimum inter-code Hamming distance (tau) = 3, computed offline over all
+ * four relative rotations, after dropping codes find() can never reach.
  * Correctable radius floor((tau-1)/2) = 1.
  */
 

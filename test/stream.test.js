@@ -143,3 +143,22 @@ test('MJPEG demuxer ignores leading garbage before the first SOI', () => {
   dm.push(jpegLike([7, 7, 7]));
   assert.deepEqual(images, [7]);
 });
+
+test('MJPEGDemuxer hands the callback an owned copy, not a view', () => {
+  // The buffer is reused for the next image, and every real consumer decodes
+  // JPEG asynchronously — a view silently corrupts under anyone who awaits.
+  const held = [];
+  const d = new MJPEGDemuxer({ onImage: (img) => held.push(img) });
+  const jpeg = (n) => new Uint8Array([0xff, 0xd8, n, n, n, n, 0xff, 0xd9]);
+  d.push(jpeg(1));
+  d.push(jpeg(2));
+  assert.equal(held.length, 2);
+  assert.deepEqual(Array.from(held[0].slice(2, 6)), [1, 1, 1, 1], 'first image survives the second');
+  assert.notEqual(held[0].buffer, held[1].buffer);
+});
+
+test('MJPEGDemuxer is reachable from the package root', async () => {
+  const root = await import('../src/index.js');
+  assert.equal(typeof root.MJPEGDemuxer, 'function');
+  assert.equal(root.MJPEGDemuxer, MJPEGDemuxer);
+});

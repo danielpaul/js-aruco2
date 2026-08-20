@@ -299,8 +299,13 @@ Posit.prototype.iterate = function(imagePoints, posRotation, posTranslation, rot
   
   error = error1 = this.error(imagePoints, rotation, translation1);
 
-  //Convergence
-  converged = (0.0 === error1.pixels) || (imageDifference < 0.01);
+  //Convergence — must match the loop's criterion below. Testing error1.pixels
+  //here (the rounded-integer residual) exits before a single refinement step
+  //whenever the initial projection happens to round onto the observed pixels,
+  //which is the exact "bestError 0 with a wrong pose" case sub-pixel
+  //convergence exists to remove.
+  converged = (error1.euclidean >= 0.0 && error1.euclidean <= CONVERGENCE_PX) ||
+              (imageDifference < 0.01);
   
   while( iteration ++ < 100 && !converged ){
   
