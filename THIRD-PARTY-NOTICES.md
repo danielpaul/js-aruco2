@@ -9,11 +9,12 @@ MIT AND BSD-2-Clause AND BSD-3-Clause
 
 Full licence texts are in `LICENSE.txt`.
 
-> **Note on LGPL.** Versions before 3.0.0 shipped `src/posit2.js`, a port of
-> AForge.NET's `CoplanarPosit`, and carried the full LGPLv3 text in
-> `LICENSE.txt` on its account. That file has been removed and the single
-> remaining POSIT implementation (`src/posit.js`) descends from js-aruco's
-> MIT-licensed `posit1.js`. There is no LGPL-licensed code in this package.
+> **Note on LGPL.** The 2.x line (`js-aruco2`) shipped `src/posit2.js`, a port
+> of AForge.NET's `CoplanarPosit`, and carried the full LGPLv3 text in
+> `LICENSE.txt` on its account. That file is not part of this rewrite, and the
+> single remaining POSIT implementation (`src/posit.js`) descends from
+> js-aruco's MIT-licensed `posit1.js`. There is no LGPL-licensed code in this
+> package.
 
 ---
 

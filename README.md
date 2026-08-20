@@ -1,4 +1,4 @@
-# js-aruco2
+# aruco3
 
 ArUco marker detection in pure JavaScript, for the browser and Node. Ships ESM,
 TypeScript types, a Web Worker, and a React hook — no WebAssembly, no build step
@@ -9,7 +9,7 @@ AprilTag, ARToolKitPlus, ARTag, ChiliTags and ArUco MIP, plus any custom square
 marker set you define.
 
 ```bash
-npm install @danielpaul/js-aruco2
+npm install aruco3
 ```
 
 **This is version 3.** It is a rewrite of the 2.x library that finds markers 2.x
@@ -17,13 +17,17 @@ missed, stops reporting ones that were never there, and ships as a module you
 can import. [What's new in 3.0](#whats-new-in-30) has the measurements;
 [Migrating from 2.x](#migrating-from-2x) has the API changes.
 
+The 2.x line is published as `js-aruco2`. This rewrite is a separate package —
+installing `aruco3` does not upgrade an existing `js-aruco2` install, and the
+two can sit side by side while you migrate.
+
 ---
 
 ## Quick start
 
 ```js
-import { Detector, Dictionary } from '@danielpaul/js-aruco2';
-import dict5x5_50 from '@danielpaul/js-aruco2/dictionaries/dict-5x5-50';
+import { Detector, Dictionary } from 'aruco3';
+import dict5x5_50 from 'aruco3/dictionaries/dict-5x5-50';
 
 const detector = new Detector({ dictionary: new Dictionary(dict5x5_50) });
 
@@ -141,7 +145,7 @@ a worker. Both hooks are client-side.
 
 ```tsx
 'use client';
-import { useArucoDetector, useCamera, useVideoFrameLoop } from '@danielpaul/js-aruco2/react';
+import { useArucoDetector, useCamera, useVideoFrameLoop } from 'aruco3/react';
 
 export function Scanner() {
   const { videoRef, error: cameraError } = useCamera({ facingMode: 'environment' });
@@ -177,7 +181,7 @@ preview, showing the newest result beats processing every frame.
 
 ```js
 const worker = new Worker(
-  new URL('@danielpaul/js-aruco2/worker', import.meta.url),
+  new URL('aruco3/worker', import.meta.url),
   { type: 'module' }
 );
 worker.postMessage({ type: 'init', id: 1, dictionary: 'DICT_5X5_50' });
@@ -199,13 +203,13 @@ behind a queue or a worker thread if it is on a hot path.
 Import the one you need for a static dependency and the smallest bundle:
 
 ```js
-import dict from '@danielpaul/js-aruco2/dictionaries/dict-5x5-50';
+import dict from 'aruco3/dictionaries/dict-5x5-50';
 ```
 
 Or load by name to have your bundler code-split it:
 
 ```js
-import { loadDictionary, DICTIONARY_NAMES } from '@danielpaul/js-aruco2/dictionaries';
+import { loadDictionary, DICTIONARY_NAMES } from 'aruco3/dictionaries';
 const dict = await loadDictionary('DICT_5X5_50');   // cached
 ```
 
@@ -235,7 +239,7 @@ Pre-3.0 names `ARUCO_4X4_1000`, `ARUCO_5X5_1000`, `ARUCO_6X6_1000` and
 ### Custom dictionaries
 
 ```js
-import { defineDictionary } from '@danielpaul/js-aruco2';
+import { defineDictionary } from 'aruco3';
 
 const mine = defineDictionary({
   name: 'MY_MARKERS',
@@ -302,7 +306,7 @@ random bit pattern to some id. Lower it to `0` if you only ever want exact reads
 ## Pose estimation
 
 ```js
-import { Posit } from '@danielpaul/js-aruco2';
+import { Posit } from 'aruco3';
 
 const posit = new Posit(markerSizeMm, focalLengthPx);
 const pose = posit.pose(centeredCorners);   // corners relative to the image centre
@@ -378,10 +382,12 @@ marker boards / ChArUco, inverted markers, and temporal tracking between frames.
 
 ## Migrating from 2.x
 
-The global `AR` / `CV` / `POS` namespaces are gone; everything is a named export.
+The package name is `aruco3`, and the global `AR` / `CV` / `POS` namespaces are
+gone — everything is a named export.
 
 | 2.x | 3.0 |
 | --- | --- |
+| `<script src="aruco.js">` / `require('js-aruco2')` | `import { ... } from 'aruco3'` |
 | `new AR.Detector({ dictionaryName: 'X' })` | `new Detector({ dictionary })` |
 | `AR.DICTIONARIES.X = {...}` | `defineDictionary({...})` |
 | `detector.detect(imageData)` | unchanged |

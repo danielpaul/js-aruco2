@@ -1,3 +1,4 @@
+Copyright (c) 2025 Daniel Paul
 Copyright (c) 2020 Damiano Falcioni
 Copyright (c) 2011 Juan Mellado
 
