@@ -1,29 +1,23 @@
 {
-  "name": "aruco-server",
-  "version": "1.0.0",
-  "description": "aruco-server",
+  "name": "aruco-server-sample",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "description": "Detect markers from an ffmpeg rawvideo stream",
   "config": {
     "port": 8081,
-    "secret": "_secret",
-    "camera": "Integrated Webcam",
-    "camera_notes_windows": "default: 'Integrated Webcam'. Check the available cameras using the command 'ffmpeg -f dshow -list_devices true -i dummy' and then 'ffmpeg -f dshow -i video=\"Integrated Webcam\" -list_options true' to see the device formats",
-    "camera_notes_unix": "default: 'video0'. Check the available cameras using the command 'v4l2-ctl --list-devices' and then 'ffmpeg -f v4l2 -list_formats all -i /dev/video0' to see the device formats",
-    "camera_notes_osx": "default: 'default'. Check the available cameras using the command 'ffmpeg -f avfoundation -list_devices true -i \"\"'",
+    "camera": "video0",
     "cameraWidth": 640,
     "cameraHeight": 480,
-    "dictionaryName": "ARUCO_MIP_36h12",
-    "maxHammingDistance": 5
+    "dictionaryName": "DICT_5X5_50",
+    "camera_notes_windows": "default 'Integrated Webcam'. List devices: ffmpeg -f dshow -list_devices true -i dummy",
+    "camera_notes_unix": "default 'video0'. List devices: v4l2-ctl --list-devices",
+    "camera_notes_osx": "default 'default'. List devices: ffmpeg -f avfoundation -list_devices true -i \"\""
   },
   "scripts": {
     "server": "node aruco-server-node.js",
-    "stream_win": "ffmpeg -f dshow -video_size %npm_package_config_cameraWidth%x%npm_package_config_cameraHeight% -i video=\"%npm_package_config_camera%\" -f rawvideo -r 1 -pix_fmt rgba http://127.0.0.1:%npm_package_config_port%/stream%npm_package_config_secret%",
-    "stream_unix": "ffmpeg -f v4l2 -video_size $npm_package_config_cameraWidthx$npm_package_config_cameraHeight -i /dev/$npm_package_config_camera -f rawvideo -r 1 -pix_fmt rgba http://127.0.0.1:$npm_package_config_port/stream$npm_package_config_secret",
-    "stream_osx": "ffmpeg -f avfoundation -video_size $npm_package_config_cameraWidthx$npm_package_config_cameraHeight -i \"$npm_package_config_camera\" -f rawvideo -r 1 -pix_fmt rgba http://127.0.0.1:$npm_package_config_port/stream$npm_package_config_secret",
-    "init": "npm install"
-  },
-  "dependencies": {
-    "http": "0.0.1-security",
-    "jpeg-js": "^0.4.2",
-    "url": "^0.11.0"
+    "stream_unix": "ffmpeg -f v4l2 -video_size ${npm_package_config_cameraWidth}x${npm_package_config_cameraHeight} -i /dev/${npm_package_config_camera} -f rawvideo -r 15 -pix_fmt rgba -method POST -headers \"Authorization: Bearer ${ARUCO_TOKEN}\" http://127.0.0.1:${npm_package_config_port}/stream",
+    "stream_osx": "ffmpeg -f avfoundation -video_size ${npm_package_config_cameraWidth}x${npm_package_config_cameraHeight} -i \"default\" -f rawvideo -r 15 -pix_fmt rgba -method POST -headers \"Authorization: Bearer ${ARUCO_TOKEN}\" http://127.0.0.1:${npm_package_config_port}/stream",
+    "stream_win": "ffmpeg -f dshow -video_size %npm_package_config_cameraWidth%x%npm_package_config_cameraHeight% -i video=\"Integrated Webcam\" -f rawvideo -r 15 -pix_fmt rgba -method POST -headers \"Authorization: Bearer %ARUCO_TOKEN%\" http://127.0.0.1:%npm_package_config_port%/stream"
   }
 }

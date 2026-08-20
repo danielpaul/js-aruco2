@@ -1,23 +1,99 @@
 {
-  "name": "js-aruco",
-  "version": "2.0.0",
-  "description": "JavaScript porting of the ArUco library supporting multiple dictionaries",
-  "main": "src/aruco.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "name": "@danielpaul/js-aruco2",
+  "version": "3.0.0",
+  "description": "ArUco marker detection in pure JavaScript, with ESM, TypeScript types, a Web Worker, and a React hook. Supports OpenCV predefined dictionaries including DICT_5X5_50.",
+  "type": "module",
+  "license": "MIT AND BSD-2-Clause AND BSD-3-Clause",
+  "author": "Damiano Falcioni",
+  "contributors": [
+    "Juan Mellado (original js-aruco)"
+  ],
+  "homepage": "https://github.com/danielpaul/js-aruco2#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/damianofalcioni/js-aruco2.git"
+    "url": "git+https://github.com/danielpaul/js-aruco2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/danielpaul/js-aruco2/issues"
   },
   "keywords": [
     "aruco",
-    "cv"
+    "apriltag",
+    "marker",
+    "fiducial",
+    "augmented-reality",
+    "computer-vision",
+    "pose-estimation",
+    "opencv",
+    "nextjs",
+    "react",
+    "webworker"
   ],
-  "author": "Damiano Falcioni",
-  "license": "BSD",
-  "bugs": {
-    "url": "https://github.com/damianofalcioni/js-aruco2/issues"
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
   },
-  "homepage": " http://www.uco.es/investiga/grupos/ava/node/26"
+  "main": "./dist/index.cjs",
+  "module": "./src/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./src/index.js"
+    },
+    "./dictionaries": {
+      "types": "./dist/dictionaries/index.d.ts",
+      "import": "./src/dictionaries/index.js",
+      "default": "./src/dictionaries/index.js"
+    },
+    "./dictionaries/*": {
+      "types": "./dist/dictionaries/*.d.ts",
+      "import": "./src/dictionaries/*.js",
+      "default": "./src/dictionaries/*.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./src/react/index.js",
+      "default": "./src/react/index.js"
+    },
+    "./worker": {
+      "types": "./dist/worker/detector.worker.d.ts",
+      "import": "./src/worker/detector.worker.js",
+      "default": "./src/worker/detector.worker.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "LICENSE.txt",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "scripts": {
+    "build": "npm run build:types && npm run build:cjs",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build:cjs": "esbuild src/index.js --bundle --format=cjs --platform=neutral --outfile=dist/index.cjs --sourcemap",
+    "build:dictionaries": "node scripts/build-dictionaries.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.js",
+    "test:golden": "node test/baseline.js compare",
+    "bench": "node test/bench.js",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
 }
