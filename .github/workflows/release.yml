@@ -27,12 +27,13 @@ jobs:
       - name: verify tag matches package.json version
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          pkg="$(node -p "require('./package.json').version")"
-          if [ "$tag" != "$pkg" ]; then
-            echo "tag v$tag does not match package.json version $pkg" >&2
+          version="$(node -p "require('./package.json').version")"
+          name="$(node -p "require('./package.json').name")"
+          if [ "$tag" != "$version" ]; then
+            echo "tag v$tag does not match package.json version $version" >&2
             exit 1
           fi
-          echo "publishing $(node -p "require('./package.json').name")@$pkg"
+          echo "publishing $name@$version"
 
       # prepublishOnly runs build + tests again; this is the same gate CI ran.
       - run: npm publish --provenance
