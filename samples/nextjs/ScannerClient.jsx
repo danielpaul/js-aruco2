@@ -5,7 +5,7 @@ import {
   useArucoDetector,
   useCamera,
   useVideoFrameLoop,
-} from 'aruco3/react';
+} from 'js-aruco3/react';
 
 /**
  * Live marker scanner.

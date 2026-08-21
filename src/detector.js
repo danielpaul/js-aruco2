@@ -80,8 +80,8 @@ function toDictionary(value) {
   }
   throw new InvalidOptionError(
     'Detector requires a `dictionary`: either a Dictionary instance, or a definition ' +
-    'object such as the default export of aruco3/dictionaries/<name>. ' +
-    'Use loadDictionary(name) from aruco3/dictionaries to load one by name.',
+    'object such as the default export of js-aruco3/dictionaries/<name>. ' +
+    'Use loadDictionary(name) from js-aruco3/dictionaries to load one by name.',
     { received: value === undefined ? 'undefined' : typeof value }
   );
 }

@@ -1,10 +1,10 @@
 # Next.js example
 
-Drop-in App Router components for `aruco3`. Copy `ScannerClient.jsx` into
+Drop-in App Router components for `js-aruco3`. Copy `ScannerClient.jsx` into
 your project and render it from a page.
 
 ```bash
-npm install aruco3
+npm install js-aruco3
 ```
 
 ## Files
@@ -29,7 +29,7 @@ which both webpack and Turbopack understand. Pass `workerUrl` to override.
 chunk. Import the data module directly instead if you prefer a static dependency:
 
 ```js
-import dict from 'aruco3/dictionaries/dict-5x5-50';
+import dict from 'js-aruco3/dictionaries/dict-5x5-50';
 useArucoDetector({ dictionary: dict });
 ```
 
@@ -44,8 +44,8 @@ server-side works. Detection is synchronous though, so a Route Handler calling
 ## Printing markers
 
 ```js
-import { Dictionary } from 'aruco3';
-import def from 'aruco3/dictionaries/dict-5x5-50';
+import { Dictionary } from 'js-aruco3';
+import def from 'js-aruco3/dictionaries/dict-5x5-50';
 
 const svg = new Dictionary(def).toSVG(7, { moduleSize: 16 });
 ```

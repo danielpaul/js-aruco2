@@ -1,5 +1,5 @@
 {
-  "name": "aruco3",
+  "name": "js-aruco3",
   "version": "3.0.0",
   "description": "ArUco marker detection in pure JavaScript, with ESM, TypeScript types, a Web Worker, and a React hook. Supports OpenCV predefined dictionaries including DICT_5X5_50.",
   "type": "module",

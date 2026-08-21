@@ -19,7 +19,7 @@
 import { InvalidDictionaryError } from './errors.js';
 
 /**
- * A dictionary definition, as shipped in `aruco3/dictionaries/*` or supplied
+ * A dictionary definition, as shipped in `js-aruco3/dictionaries/*` or supplied
  * for a custom marker set.
  *
  * @typedef {object} DictionaryDefinition

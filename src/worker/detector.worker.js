@@ -10,7 +10,7 @@
  * Instantiate with the URL form both webpack and Turbopack understand:
  *
  *   const worker = new Worker(
- *     new URL('aruco3/worker', import.meta.url),
+ *     new URL('js-aruco3/worker', import.meta.url),
  *     { type: 'module' }
  *   );
  *
