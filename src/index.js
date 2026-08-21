@@ -1,13 +1,13 @@
 /**
- * js-aruco2 — ArUco marker detection for the browser and Node.
+ * js-aruco3 — ArUco marker detection for the browser and Node.
  *
  * Public entry point. Deliberately contains no dictionary data: import the one
- * you need from `js-aruco2/dictionaries/<name>` for a static dependency, or use
- * `loadDictionary(name)` from `js-aruco2/dictionaries` to code-split it.
+ * you need from `js-aruco3/dictionaries/<name>` for a static dependency, or use
+ * `loadDictionary(name)` from `js-aruco3/dictionaries` to code-split it.
  *
  * @example
- * import { Detector } from 'js-aruco2';
- * import dict from 'js-aruco2/dictionaries/dict-5x5-50';
+ * import { Detector } from 'js-aruco3';
+ * import dict from 'js-aruco3/dictionaries/dict-5x5-50';
  *
  * // a definition object is accepted directly, and wrapped once
  * const detector = new Detector({ dictionary: dict });
@@ -15,8 +15,8 @@
  *
  * @example
  * // or build the Dictionary yourself, to read tau / warnings / toSVG
- * import { Detector, Dictionary } from 'js-aruco2';
- * import def from 'js-aruco2/dictionaries/dict-5x5-50';
+ * import { Detector, Dictionary } from 'js-aruco3';
+ * import def from 'js-aruco3/dictionaries/dict-5x5-50';
  *
  * const dictionary = new Dictionary(def);
  * const detector = new Detector({ dictionary });

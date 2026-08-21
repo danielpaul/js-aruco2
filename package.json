@@ -1,20 +1,21 @@
 {
-  "name": "@danielpaul/js-aruco2",
+  "name": "js-aruco3",
   "version": "3.0.0",
   "description": "ArUco marker detection in pure JavaScript, with ESM, TypeScript types, a Web Worker, and a React hook. Supports OpenCV predefined dictionaries including DICT_5X5_50.",
   "type": "module",
   "license": "MIT AND BSD-2-Clause AND BSD-3-Clause",
-  "author": "Damiano Falcioni",
+  "author": "Daniel Paul <daniel@identitysquare.com>",
   "contributors": [
+    "Damiano Falcioni (js-aruco2)",
     "Juan Mellado (original js-aruco)"
   ],
-  "homepage": "https://github.com/danielpaul/js-aruco2#readme",
+  "homepage": "https://github.com/danielpaul/js-aruco3#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/danielpaul/js-aruco2.git"
+    "url": "git+https://github.com/danielpaul/js-aruco3.git"
   },
   "bugs": {
-    "url": "https://github.com/danielpaul/js-aruco2/issues"
+    "url": "https://github.com/danielpaul/js-aruco3/issues"
   },
   "keywords": [
     "aruco",
@@ -64,6 +65,9 @@
       "default": "./src/worker/detector.worker.js"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "src",
